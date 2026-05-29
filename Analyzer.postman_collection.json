@@ -1,0 +1,478 @@
+{
+  "info": {
+    "_postman_id": "github-profile-analyzer-v1",
+    "name": "GitHub Profile Analyzer API",
+    "description": "Complete API collection for the GitHub Profile Analyzer backend service.\n\n## Setup\n1. Import this collection into Postman\n2. Set the `base_url` variable to your deployed URL or `http://localhost:3000`\n3. Run **Analyze Profile** first before calling GET endpoints\n\n## Base URL Variable\n- Local: `http://localhost:3000`\n- Deployed: your Railway/Render URL",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000",
+      "type": "string",
+      "description": "Change this to your deployed URL"
+    },
+    {
+      "key": "username",
+      "value": "torvalds",
+      "type": "string",
+      "description": "GitHub username to analyze"
+    }
+  ],
+  "item": [
+    {
+      "name": " Health & Info",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check if the API server is running and healthy."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/health" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"status\": \"ok\",\n  \"service\": \"github-profile-analyzer\",\n  \"timestamp\": \"2025-01-01T00:00:00.000Z\",\n  \"environment\": \"development\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "API Root — Endpoint Directory",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            },
+            "description": "Returns a directory of all available API endpoints."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": " Analyze",
+      "item": [
+        {
+          "name": "Analyze GitHub Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/analyze/{{username}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analyze", "{{username}}"]
+            },
+            "description": "Fetches a GitHub user's public profile and all repositories, computes insights (stars, forks, language breakdown, activity score, account age), and stores/refreshes the record in MySQL.\n\n**Returns 201** on first analysis, **200** on refresh.\n\n**Rate limit:** 10 requests/minute"
+          },
+          "response": [
+            {
+              "name": "201 Created - New Profile",
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/api/analyze/torvalds" }
+              },
+              "status": "Created",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile analyzed and stored.\",\n  \"data\": {\n    \"id\": 1,\n    \"github_id\": 1024025,\n    \"username\": \"torvalds\",\n    \"display_name\": \"Linus Torvalds\",\n    \"bio\": null,\n    \"company\": \"Linux Foundation\",\n    \"location\": \"Portland, OR\",\n    \"email\": null,\n    \"blog_url\": null,\n    \"twitter_handle\": null,\n    \"avatar_url\": \"https://avatars.githubusercontent.com/u/1024025\",\n    \"github_url\": \"https://github.com/torvalds\",\n    \"account_type\": \"User\",\n    \"public_repos\": 8,\n    \"public_gists\": 0,\n    \"followers\": 236000,\n    \"following\": 0,\n    \"total_stars\": 195000,\n    \"total_forks\": 56000,\n    \"total_watchers\": 195000,\n    \"account_age_days\": 5670,\n    \"activity_score\": 95.47,\n    \"hireable\": 0,\n    \"github_created_at\": \"2011-09-03T15:26:22.000Z\",\n    \"github_updated_at\": \"2024-01-01T00:00:00.000Z\",\n    \"created_at\": \"2025-01-01T00:00:00.000Z\",\n    \"last_analyzed_at\": \"2025-01-01T00:00:00.000Z\",\n    \"top_repositories\": [\n      {\n        \"repo_name\": \"linux\",\n        \"full_name\": \"torvalds/linux\",\n        \"description\": \"Linux kernel source tree\",\n        \"language\": \"C\",\n        \"stars\": 185000,\n        \"forks\": 55000,\n        \"watchers\": 185000,\n        \"open_issues\": 0,\n        \"is_fork\": 0,\n        \"repo_url\": \"https://github.com/torvalds/linux\",\n        \"created_at\": \"2011-09-04T22:48:12.000Z\"\n      }\n    ],\n    \"languages\": [\n      { \"language\": \"C\", \"repo_count\": 3, \"percentage\": 60.00 },\n      { \"language\": \"Python\", \"repo_count\": 2, \"percentage\": 40.00 }\n    ]\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/api/analyze/this-user-does-not-exist-xyz" }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"GitHub user 'this-user-does-not-exist-xyz' not found.\"\n}"
+            },
+            {
+              "name": "400 Bad Request - Invalid Username",
+              "originalRequest": {
+                "method": "POST",
+                "url": { "raw": "{{base_url}}/api/analyze/invalid username!" }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Invalid GitHub username format.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Analyze - Popular Devs (Batch Examples)",
+          "item": [
+            {
+              "name": "Analyze: gaearon (Dan Abramov)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/analyze/gaearon",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "analyze", "gaearon"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Analyze: sindresorhus",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/analyze/sindresorhus",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "analyze", "sindresorhus"]
+                }
+              },
+              "response": []
+            },
+            {
+              "name": "Analyze: yyx990803 (Evan You)",
+              "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{base_url}}/api/analyze/yyx990803",
+                  "host": ["{{base_url}}"],
+                  "path": ["api", "analyze", "yyx990803"]
+                }
+              },
+              "response": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": " Profiles",
+      "item": [
+        {
+          "name": "List All Profiles (Default)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"]
+            },
+            "description": "Returns all stored profiles with pagination. Default: page 1, 20 per page, sorted by last_analyzed_at DESC."
+          },
+          "response": []
+        },
+        {
+          "name": "List Profiles — Sort by Stars",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles?sort=total_stars&order=desc&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "sort", "value": "total_stars" },
+                { "key": "order", "value": "desc" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "Top profiles sorted by total GitHub stars."
+          },
+          "response": []
+        },
+        {
+          "name": "List Profiles — Sort by Followers",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles?sort=followers&order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "sort", "value": "followers" },
+                { "key": "order", "value": "desc" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Profiles — Sort by Activity Score",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles?sort=activity_score&order=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "sort", "value": "activity_score" },
+                { "key": "order", "value": "desc" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Profiles — Search by Name/Location",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles?search=Portland",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "search", "value": "Portland" }
+              ]
+            },
+            "description": "Search profiles by username, display name, or location."
+          },
+          "response": []
+        },
+        {
+          "name": "List Profiles — Paginated",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles?page=2&limit=5",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"],
+              "query": [
+                { "key": "page", "value": "2" },
+                { "key": "limit", "value": "5" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/{{username}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "{{username}}"]
+            },
+            "description": "Returns the full stored profile including top repositories and language breakdown. Run Analyze first."
+          },
+          "response": [
+            {
+              "name": "200 OK — Full Profile",
+              "originalRequest": {
+                "method": "GET",
+                "url": { "raw": "{{base_url}}/api/profiles/torvalds" }
+              },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": 1,\n    \"username\": \"torvalds\",\n    \"display_name\": \"Linus Torvalds\",\n    \"followers\": 236000,\n    \"total_stars\": 195000,\n    \"activity_score\": 95.47,\n    \"top_repositories\": [...],\n    \"languages\": [...]\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"message\": \"Profile 'unknownuser' not found. Use POST /api/analyze/unknownuser to analyze it first.\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/{{username}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "{{username}}"]
+            },
+            "description": "Permanently deletes the stored profile and all associated repositories and language data."
+          },
+          "response": [
+            {
+              "name": "200 OK — Deleted",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile 'torvalds' deleted successfully.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": " Sub-Resources",
+      "item": [
+        {
+          "name": "Get Profile Repositories",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/{{username}}/repos",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "{{username}}", "repos"]
+            },
+            "description": "Returns top 10 repositories (by stars) stored for the user."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"count\": 8,\n  \"data\": [\n    {\n      \"repo_name\": \"linux\",\n      \"full_name\": \"torvalds/linux\",\n      \"description\": \"Linux kernel source tree\",\n      \"language\": \"C\",\n      \"stars\": 185000,\n      \"forks\": 55000,\n      \"watchers\": 185000,\n      \"open_issues\": 0,\n      \"is_fork\": 0,\n      \"repo_url\": \"https://github.com/torvalds/linux\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Profile Language Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/{{username}}/languages",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "{{username}}", "languages"]
+            },
+            "description": "Returns language breakdown with repo count and percentage for the user's non-forked repos."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"count\": 3,\n  \"data\": [\n    { \"language\": \"C\", \"repo_count\": 5, \"percentage\": 62.50 },\n    { \"language\": \"Python\", \"repo_count\": 2, \"percentage\": 25.00 },\n    { \"language\": \"Shell\", \"repo_count\": 1, \"percentage\": 12.50 }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": " Stats & Logs",
+      "item": [
+        {
+          "name": "Global Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "stats"]
+            },
+            "description": "Aggregate statistics across ALL stored profiles:\n- Total profiles, followers, stars, repos\n- Averages\n- Top 5 by stars\n- Top 5 by followers\n- Top 10 most common languages"
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"total_profiles\": 4,\n    \"total_followers\": 542000,\n    \"total_stars\": 380000,\n    \"total_repos\": 890,\n    \"avg_followers\": 135500.00,\n    \"avg_stars\": 95000.00,\n    \"avg_activity_score\": 72.34,\n    \"top_by_stars\": [\n      { \"username\": \"torvalds\", \"display_name\": \"Linus Torvalds\", \"total_stars\": 195000 }\n    ],\n    \"top_by_followers\": [\n      { \"username\": \"torvalds\", \"display_name\": \"Linus Torvalds\", \"followers\": 236000 }\n    ],\n    \"popular_languages\": [\n      { \"language\": \"JavaScript\", \"total_repos\": 120 },\n      { \"language\": \"Python\", \"total_repos\": 98 }\n    ]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Audit Logs (Last 50)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/logs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "logs"]
+            },
+            "description": "Returns the most recent analysis audit log entries: who was analyzed, when, from which IP, and how long it took."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"count\": 3,\n  \"data\": [\n    {\n      \"id\": 3,\n      \"username\": \"torvalds\",\n      \"action\": \"fetched\",\n      \"ip_address\": \"::1\",\n      \"response_ms\": 12,\n      \"status\": \"success\",\n      \"error_message\": null,\n      \"created_at\": \"2025-01-01T00:05:00.000Z\"\n    },\n    {\n      \"id\": 2,\n      \"username\": \"torvalds\",\n      \"action\": \"refreshed\",\n      \"ip_address\": \"::1\",\n      \"response_ms\": 1840,\n      \"status\": \"success\",\n      \"error_message\": null,\n      \"created_at\": \"2025-01-01T00:04:00.000Z\"\n    },\n    {\n      \"id\": 1,\n      \"username\": \"torvalds\",\n      \"action\": \"created\",\n      \"ip_address\": \"::1\",\n      \"response_ms\": 2100,\n      \"status\": \"success\",\n      \"error_message\": null,\n      \"created_at\": \"2025-01-01T00:00:00.000Z\"\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Audit Logs (Custom Limit)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/logs?limit=100",
+              "host": ["{{base_url}}"],
+              "path": ["api", "logs"],
+              "query": [
+                { "key": "limit", "value": "100", "description": "Max 200" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": " Error Cases",
+      "item": [
+        {
+          "name": "404 — Unknown Route",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/does-not-exist",
+              "host": ["{{base_url}}"],
+              "path": ["api", "does-not-exist"]
+            },
+            "description": "Tests the 404 handler for unknown routes."
+          },
+          "response": []
+        },
+        {
+          "name": "404 — Profile Not Analyzed Yet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/never-analyzed-user",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "never-analyzed-user"]
+            },
+            "description": "Profile that hasn't been analyzed yet — returns helpful 404 with instructions."
+          },
+          "response": []
+        },
+        {
+          "name": "400 — Invalid Username Format",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/analyze/invalid username with spaces",
+              "host": ["{{base_url}}"],
+              "path": ["api", "analyze", "invalid username with spaces"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
