@@ -1,91 +1,52 @@
-const express = require("express");
-const router = express.Router();
+const rateLimit = require("express-rate-limit");
+const NodeCache = require("node-cache");
 
-const {
-  analyzeProfile,
-  getAllProfiles,
-  getProfile,
-  deleteProfile,
-  getProfileRepos,
-  getProfileLanguages,
-  getGlobalStats,
-  getLogs,
-} = require("../controllers/githubController");
+// ── In-memory cache ──────────────────────────────────────────
+const cache = new NodeCache({
+  stdTTL: parseInt(process.env.CACHE_TTL) || 300,
+  checkperiod: 60,
+  useClones: false,
+});
 
-const { analyzeLimiter, cacheMiddleware } = require("../middleware/rateLimiter");
+/** Express middleware: serve from cache if available */
+function cacheMiddleware(keyFn) {
+  return (req, res, next) => {
+    const key = keyFn(req);
+    const hit = cache.get(key);
+    if (hit) {
+      return res.json({ ...hit, _cache: true });
+    }
+    res.setCache = (data) => cache.set(key, data);
+    next();
+  };
+}
 
-//  Cache key factories 
-const profileListKey = (req) =>
-  `profiles:list:${req.query.page}:${req.query.limit}:${req.query.sort}:${req.query.order}:${req.query.search || ""}`;
-const profileKey   = (req) => `profiles:${req.params.username}`;
-const reposKey     = (req) => `repos:${req.params.username}`;
-const langsKey     = (req) => `langs:${req.params.username}`;
-const statsKey     = ()    => "global:stats";
+// ── Rate limiter ─────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
+  max: parseInt(process.env.RATE_LIMIT_MAX) || 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      message: "Too many requests, please try again after 15 minutes.",
+    });
+  },
+});
 
-//  Analyze / Refresh 
+// Stricter limiter for the analyze endpoint
+const analyzeLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    res.status(429).json({
+      success: false,
+      message: "Analyze rate limit reached. Max 10 analyses per minute.",
+    });
+  },
+});
 
-/**
- * @route  POST /api/analyze/:username
- * @desc   Fetch and store a GitHub user's insights
- * @access Public
- */
-router.post("/analyze/:username", analyzeLimiter, analyzeProfile);
-
-//  Profile CRUD 
-
-/**
- * @route  GET /api/profiles
- * @desc   List all stored profiles
- * @query  page, limit, sort, order, search
- * @access Public
- */
-router.get("/profiles", cacheMiddleware(profileListKey), getAllProfiles);
-
-/**
- * @route  GET /api/profiles/:username
- * @desc   Get a single stored profile with repos and language breakdown
- * @access Public
- */
-router.get("/profiles/:username", cacheMiddleware(profileKey), getProfile);
-
-/**
- * @route  DELETE /api/profiles/:username
- * @desc   Delete a stored profile
- * @access Public
- */
-router.delete("/profiles/:username", deleteProfile);
-
-//  Sub-resources 
-
-/**
- * @route  GET /api/profiles/:username/repos
- * @desc   Get stored repositories for a profile
- * @access Public
- */
-router.get("/profiles/:username/repos", cacheMiddleware(reposKey), getProfileRepos);
-
-/**
- * @route  GET /api/profiles/:username/languages
- * @desc   Get language breakdown for a profile
- * @access Public
- */
-router.get("/profiles/:username/languages", cacheMiddleware(langsKey), getProfileLanguages);
-
-//  Aggregate & Utility 
-
-/**
- * @route  GET /api/stats
- * @desc   Global statistics across all stored profiles
- * @access Public
- */
-router.get("/stats", cacheMiddleware(statsKey), getGlobalStats);
-
-/**
- * @route  GET /api/logs
- * @desc   Recent analysis audit logs
- * @query  limit (default 50, max 200)
- * @access Public
- */
-router.get("/logs", getLogs);
-
-module.exports = router;
+module.exports = { cache, cacheMiddleware, apiLimiter, analyzeLimiter };
